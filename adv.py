@@ -51,96 +51,115 @@ class Graph:
 
     def __init__(self):
         self.vertices = {}
+        self.current_room_id = None
+        self.current_room = None
+        self.last_room = None
 
     def dft(self):
-        response = requests.get(
-        ' https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
-        headers={'Authorization': 'Token 511b799007ac9e828b320eaf2c3d6525557e9502'},
-        )
-        json_response = response.json()
-
-
-        grid_with_all_info[json_response["room_id"]] = json_response
-
-        current_room = json_response
-      
+        # print(self.current_room, f"line 58")
         s = Stack()
-        s.push(current_room["room_id"])
+        s.push(self.current_room["room_id"])
         visited = set()
-        last_room = None
+        
+        
         last_direction = None
 
         while s.size() > 0:
-            if current_room["room_id"] not in self.vertices:
-                  self.vertices[current_room["room_id"]] = {}
-                  for direction in current_room["exits"]:
-                        self.vertices[current_room["room_id"]][direction] = "?"
+            if self.current_room["room_id"] not in self.vertices:
+                  self.vertices[self.current_room["room_id"]] = {}
+                  for direction in self.current_room["exits"]:
+                        self.vertices[self.current_room["room_id"]][direction] = "?"
             if last_direction:
-              self.vertices[current_room["room_id"]][direction_reversed[last_direction]] = last_room
+              self.vertices[self.current_room["room_id"]][direction_reversed[last_direction]] = self.last_room
 
-            print(self.vertices)
-            last_room = current_room["room_id"]
+            # print(self.vertices)
+            self.last_room = self.current_room["room_id"]
             v = s.pop()
             if v not in visited:
                 visited.add(v)
-                exits = current_room["exits"]
+                exits = self.current_room["exits"]
                 
                 while True: 
                     direction = exits[random.randint(0, len(exits) - 1)]
-                    if self.vertices[current_room["room_id"]][direction] == "?":
-                            time.sleep(3)
+                    if self.vertices[self.current_room["room_id"]][direction] == "?":
+                            time.sleep(self.current_room["cooldown"])
+                            (print("dft"))
                             the_new_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/move/', json={'direction':f'{direction}'}, headers={'Authorization': 'Token 511b799007ac9e828b320eaf2c3d6525557e9502'})  
                             new_room = the_new_room.json()
-                            print(new_room, the_new_room, direction)
-                            self.vertices[last_room][direction] = new_room["room_id"] 
+                            # print(new_room, the_new_room, direction)
+                            self.vertices[self.last_room][direction] = new_room["room_id"] 
                             last_direction = direction
                             s.push(new_room["room_id"])
-                            current_room = new_room
+                            self.current_room = new_room
                             grid_with_all_info[new_room["room_id"]] = new_room
+                            print(self.current_room)
                             break
                     break
-                    
+        self.current_room_id = self.current_room["room_id"]
 
-    # def bfs(self):
-    #     q = Queue()
-    #     q.enqueue([player.currentRoom.id])
-    #     visited = set()
-    #     while q.size() > 0:
-    #         path = q.dequeue()
-    #         v = path[-1]
-    #         if v not in visited:
-    #             for direction in ["s", "n", "e", "w"]:
-    #                 try: 
-    #                     if self.vertices[v][direction] == "?":
-    #                         return path
-    #                 except KeyError:
-    #                     None
-    #             visited.add(v)
-    #             for key, value in self.vertices[v].items():
-    #                 new_path = list(path)
-    #                 new_path.append(value)
-    #                 q.enqueue(new_path)
+    def bfs(self):
+        q = Queue()
+        q.enqueue([self.current_room_id])
+        visited = set()
+        while q.size() > 0:
+            path = q.dequeue()
+            v = path[-1]
+            if v not in visited:
+                for direction in ["s", "n", "e", "w"]:
+                    try: 
+                        if self.vertices[v][direction] == "?":
+                            return path
+                    except KeyError:
+                        None
+                visited.add(v)
+                for key, value in self.vertices[v].items():
+                    new_path = list(path)
+                    new_path.append(value)
+                    q.enqueue(new_path)
       
     def traverse(self):
-      # while len(self.vertices) < 500: # maybe 499 => needs to be checked 
-        self.dft()
+      response = requests.get(
+      ' https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
+      headers={'Authorization': 'Token 511b799007ac9e828b320eaf2c3d6525557e9502'},
+      )
+        
+      json_response = response.json()
+
+
+      grid_with_all_info[json_response["room_id"]] = json_response
+
+      self.current_room = json_response
+
+      while len(self.vertices) < 500: # maybe 499 => needs to be checked 
+          self.dft()
           
-          # shortest_path_bfs = self.bfs()
+          shortest_path_bfs = self.bfs()
+          # print(shortest_path_bfs)
       
-          # try:
-          #     for index in range(len(shortest_path_bfs)):
-          #         for direction in ["n", "s", "e", "w"]:
-          #             try:
-          #                 if self.vertices[shortest_path_bfs[index]][direction] == shortest_path_bfs[index + 1]: 
-          #                     player.travel(direction) # CALL MOVEMENT ONLY EVERY SECOND
-          #                     break
-          #             except KeyError:
-          #                 None
-          #             except IndexError:
-          #                 None
-          # except TypeError:
-          #   return
+          try:
+              for index in range(len(shortest_path_bfs)):
+                  for direction in ["n", "s", "e", "w"]:
+                      try:
+                          if self.vertices[shortest_path_bfs[index]][direction] == shortest_path_bfs[index + 1]: 
+                              time.sleep(self.current_room["cooldown"])
+                              print("bfs", shortest_path_bfs)
+                              the_new_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/move/', json={'direction':f'{direction}', 
+                              "next_room_id": f'{shortest_path_bfs[index + 1]}'}, headers={'Authorization': 'Token 511b799007ac9e828b320eaf2c3d6525557e9502'})
+                              new_room = the_new_room.json()
+                              self.current_room = new_room
+                              self.current_room_id = new_room["room_id"]
+                              print(self.current_room)
+                              
+                              break
+                      except KeyError:
+                          None
+                      except IndexError:
+                          None
+          except TypeError:
+            None
 
 graph = Graph()
 graph.traverse()
 print(grid_with_all_info)
+
+print(graph.vertices)
