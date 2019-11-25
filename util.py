@@ -136,8 +136,16 @@ class Graph:
 graph = Graph()
 graph.traverse()
 
-with open('grid_with_all_info.txt', 'w') as outfile:
+with open('grid_with_all_infos.txt', 'w') as outfile:
     json.dump(grid_with_all_info, outfile)
 
-with open('grid_with_all_directions.txt', 'w') as outfile:
+with open('grid_with_all_directionss.txt', 'w') as outfile:
     json.dump(graph.vertices, outfile)
+
+
+
+
+
+    # if "small treasure" in self.current_room["items"] or :
+    # updated_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/take/', json={"name":"treasure"}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'})
+    # time.sleep(20)
