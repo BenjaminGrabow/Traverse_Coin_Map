@@ -12,7 +12,6 @@ class Graph:
 
     def __init__(self):
         self.vertices = {}
-        self.current_room_id = None
         self.current_room = None
         self.last_room = None
 
@@ -43,21 +42,30 @@ class Graph:
                     direction = exits[random.randint(0, len(exits) - 1)]
                     if self.vertices[self.current_room["room_id"]][direction] == "?":
                         time.sleep(self.current_room["cooldown"])
-                        the_new_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/move/', json={
-                        'direction': f'{direction}'}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'})
-                        new_room = the_new_room.json()
+                        new_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/move/', json={
+                        'direction': f'{direction}'}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'}).json()
                         self.vertices[self.last_room][direction] = new_room["room_id"]
                         last_direction = direction
                         s.push(new_room["room_id"])
                         self.current_room = new_room
                         grid_with_all_info[new_room["room_id"]] = new_room
+                        print(self.current_room)
+
+                        while self.current_room["items"] != []:
+                          time.sleep(self.current_room["cooldown"])
+                          check_inventory = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/status/', json={"name":"treasure"}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'}).json()
+                          print(check_inventory)
+                          if check_inventory["strength"] > check_inventory["encumbrance"]:
+                              time.sleep(self.current_room["cooldown"])
+                              updated_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/take/', json={"name":"treasure"}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'}).json()
+                              self.current_room = updated_room
+                              print(updated_room)
                         break
                     break
-        self.current_room_id = self.current_room["room_id"]
 
     def bfs(self):
         q = Queue()
-        q.enqueue([self.current_room_id])
+        q.enqueue([self.current_room["room_id"]])
         visited = set()
         while q.size() > 0:
             path = q.dequeue()
@@ -86,7 +94,7 @@ class Graph:
 
         self.current_room = json_response
 
-        while len(self.vertices) < 499:
+        while self.current_room["room_id"] != 1:
             self.dft()
             shortest_path_bfs = self.bfs()
 
@@ -94,11 +102,9 @@ class Graph:
                 for direction in grid_with_all_info[self.current_room["room_id"]]["exits"]:
                     if self.vertices[self.current_room["room_id"]][direction] == room:
                         time.sleep(self.current_room["cooldown"])
-                        the_new_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/move/', json={'direction': f'{direction}',
-                        "next_room_id": f'{room}'}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'})
-                        new_room = the_new_room.json()
+                        new_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/move/', json={'direction': f'{direction}',
+                        "next_room_id": f'{room}'}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'}).json()
                         self.current_room = new_room
-                        self.current_room_id = new_room["room_id"]
                         break
 
 graph = Graph()
@@ -111,6 +117,8 @@ with open('grid_with_all_directionss.txt', 'w') as outfile:
     json.dump(graph.vertices, outfile)
 
 
-    # if "small treasure" in self.current_room["items"] or :
+    
+    # while self.current_room["items"] != [] :
     # updated_room = requests.post('https://lambda-treasure-hunt.herokuapp.com/api/adv/take/', json={"name":"treasure"}, headers={'Authorization': 'Token b998850f7eea4d86b11aa5894d59ecc8cafa888c'})
     # time.sleep(20)
+    
